@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f4f5f1" />
+    <meta
+      name="description"
+      content="Личный финансовый помощник для расходов во Вьетнаме: VND, RUB, кошельки, лимиты и отчёты."
+    />
+    <title>Dongle — контроль расходов</title>
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="#" aria-label="Dongle — главная">
+          <span class="brand-mark" aria-hidden="true">₫</span>
+          <span>Dongle</span>
+        </a>
+
+        <nav class="main-nav" aria-label="Основная навигация">
+          <button class="nav-item is-active" data-view="dashboard" type="button">
+            <span aria-hidden="true">⌂</span><span>Обзор</span>
+          </button>
+          <button class="nav-item" data-view="expenses" type="button">
+            <span aria-hidden="true">↗</span><span>Расходы</span>
+          </button>
+          <button class="nav-item" data-view="wallets" type="button">
+            <span aria-hidden="true">▣</span><span>Кошельки</span>
+          </button>
+          <button class="nav-item" data-view="limits" type="button">
+            <span aria-hidden="true">◎</span><span>Лимиты</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-bottom">
+          <button class="nav-item" data-view="settings" type="button">
+            <span aria-hidden="true">⚙</span><span>Настройки</span>
+          </button>
+          <a class="developer-link" href="https://t.me/dayagichik" target="_blank" rel="noopener noreferrer" title="Разработчик @g1chx — Telegram">
+            <span aria-hidden="true">↗</span><span>Разработчик <strong>@g1chx</strong></span>
+          </a>
+          <div class="local-note">
+            <span class="status-dot"></span>
+            <div><strong>Только на устройстве</strong><small>Данные не покидают браузер</small></div>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow" id="pageEyebrow">Финансовый помощник</p>
+            <h1 id="pageTitle">Добрый день</h1>
+          </div>
+          <div class="topbar-actions">
+            <button class="rate-pill" id="rateButton" type="button" title="Обновить курс">
+              <span class="status-dot"></span>
+              <span id="rateLabel">Загружаю курс…</span>
+              <span aria-hidden="true">↻</span>
+            </button>
+            <button class="mobile-settings-button" id="mobileSettingsButton" type="button" aria-label="Открыть настройки">⚙</button>
+            <button class="primary-button" id="openExpenseButton" type="button">
+              <span aria-hidden="true">＋</span> Добавить расход
+            </button>
+          </div>
+        </header>
+
+        <section class="view is-active" id="dashboardView" data-view-panel="dashboard">
+          <div class="period-switcher" aria-label="Период отчёта">
+            <button class="period-button is-active" data-period="day" type="button">Сегодня</button>
+            <button class="period-button" data-period="week" type="button">7 дней</button>
+            <button class="period-button" data-period="month" type="button">Месяц</button>
+          </div>
+
+          <div class="summary-grid">
+            <article class="hero-card">
+              <div class="card-heading">
+                <div>
+                  <p class="card-kicker" id="periodTitle">Расходы сегодня</p>
+                  <h2 id="periodVnd">0 ₫</h2>
+                  <p class="secondary-amount" id="periodRub">≈ 0 ₽</p>
+                </div>
+                <span class="trend-badge" id="expenseCount">0 операций</span>
+              </div>
+              <div class="sparkline" id="sparkline" aria-label="Динамика расходов"></div>
+            </article>
+
+            <article class="balance-card">
+              <div class="card-heading compact">
+                <div>
+                  <p class="card-kicker">Все деньги</p>
+                  <h2 id="totalBalanceRub">0 ₽</h2>
+                  <p class="secondary-amount" id="walletCount">0 кошельков</p>
+                </div>
+                <button class="icon-button" data-go-view="wallets" type="button" aria-label="Открыть кошельки">→</button>
+              </div>
+              <div class="wallet-preview" id="walletPreview"></div>
+              <button class="wallet-home-add" id="addWalletHome" type="button"><span aria-hidden="true">＋</span> Добавить кошелёк</button>
+            </article>
+          </div>
+
+          <div class="dashboard-grid">
+            <article class="panel category-panel">
+              <div class="panel-header">
+                <div><p class="card-kicker">Структура расходов</p><h3>По категориям</h3></div>
+                <span class="muted" id="chartPeriodLabel">Сегодня</span>
+              </div>
+              <div class="category-content">
+                <div class="donut-wrap">
+                  <div class="donut" id="categoryDonut" role="img" aria-label="Расходы по категориям">
+                    <div class="donut-center"><strong id="donutTotal">0</strong><span>млн ₫</span></div>
+                  </div>
+                </div>
+                <div class="legend" id="categoryLegend"></div>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-header">
+                <div><p class="card-kicker">Контроль бюджета</p><h3>Лимиты месяца</h3></div>
+                <button class="text-button" data-go-view="limits" type="button">Настроить</button>
+              </div>
+              <div class="limit-preview" id="limitPreview"></div>
+            </article>
+          </div>
+
+          <article class="panel recent-panel">
+            <div class="panel-header">
+              <div><p class="card-kicker">Последние операции</p><h3>Свежие расходы</h3></div>
+              <button class="text-button" data-go-view="expenses" type="button">Все расходы</button>
+            </div>
+            <div id="recentExpenses"></div>
+          </article>
+        </section>
+
+        <section class="view" id="expensesView" data-view-panel="expenses">
+          <div class="section-toolbar">
+            <div class="month-picker">
+              <button class="icon-button" id="prevMonth" type="button" aria-label="Предыдущий месяц">←</button>
+              <div><small>Отчёт за месяц</small><strong id="reportMonth"></strong></div>
+              <button class="icon-button" id="nextMonth" type="button" aria-label="Следующий месяц">→</button>
+            </div>
+            <label class="search-box">
+              <span aria-hidden="true">⌕</span>
+              <input id="expenseSearch" type="search" placeholder="Поиск по расходам" />
+            </label>
+          </div>
+          <div class="report-strip">
+            <div><span>За месяц</span><strong id="reportVnd">0 ₫</strong><small id="reportRub">0 ₽</small></div>
+            <div><span>Среднее в день</span><strong id="reportAverage">0 ₫</strong><small id="reportDays">0 дней с тратами</small></div>
+            <div><span>Самая крупная</span><strong id="reportLargest">0 ₫</strong><small id="reportLargestCategory">—</small></div>
+          </div>
+          <article class="panel table-panel">
+            <div class="expense-list-header"><span>Операция</span><span>Оплата</span><span>Сумма</span><span></span></div>
+            <div id="allExpenses"></div>
+          </article>
+        </section>
+
+        <section class="view" id="walletsView" data-view-panel="wallets">
+          <div class="section-intro">
+            <div><p>Все ваши деньги — наличные, карты и криптокошельки — в одном месте.</p></div>
+            <button class="secondary-button" id="openWalletButton" type="button">＋ Добавить кошелёк</button>
+          </div>
+          <div class="wallets-grid" id="walletsGrid"></div>
+        </section>
+
+        <section class="view" id="limitsView" data-view-panel="limits">
+          <div class="section-intro">
+            <div><p>Задайте месячный предел в рублях или донгах. Эквивалент в другой валюте рассчитывается автоматически по текущему курсу.</p></div>
+          </div>
+          <div class="limits-grid" id="limitsGrid"></div>
+        </section>
+
+        <section class="view" id="settingsView" data-view-panel="settings">
+          <div class="settings-grid">
+            <article class="panel settings-card">
+              <div class="panel-header"><div><p class="card-kicker">Валюта</p><h3>Курс VND → RUB</h3></div></div>
+              <p class="settings-copy">Курс берётся из открытого онлайн-источника и обновляется раз в день. При отсутствии сети используется последний сохранённый курс. Ручной курс действует до следующего автообновления.</p>
+              <p class="rate-source" id="rateSource"></p>
+              <label class="field"><span>1 VND в RUB</span><input id="manualRate" type="number" min="0" step="0.000001" /></label>
+              <div class="inline-actions"><button class="secondary-button" id="saveRateButton" type="button">Сохранить курс</button><button class="text-button" id="autoRateButton" type="button">Обновить автоматически</button></div>
+            </article>
+            <article class="panel settings-card">
+              <div class="panel-header"><div><p class="card-kicker">Резервная копия</p><h3>Экспорт и импорт</h3></div></div>
+              <p class="settings-copy">Скачайте все расходы, кошельки и лимиты одним JSON-файлом. Он пригодится при смене браузера или устройства.</p>
+              <div class="inline-actions"><button class="secondary-button" id="exportButton" type="button">Скачать данные</button><label class="file-button">Загрузить копию<input id="importInput" type="file" accept="application/json" /></label></div>
+            </article>
+            <article class="panel settings-card danger-card">
+              <div class="panel-header"><div><p class="card-kicker">Опасная зона</p><h3>Очистить данные</h3></div></div>
+              <p class="settings-copy">Удалит все операции, кошельки и настройки из этого браузера. Отменить действие нельзя.</p>
+              <button class="danger-button" id="resetButton" type="button">Удалить всё</button>
+            </article>
+            <a class="developer-mobile-link" href="https://t.me/dayagichik" target="_blank" rel="noopener noreferrer">Разработчик @g1chx · Telegram ↗</a>
+          </div>
+        </section>
+      </main>
+
+      <nav class="mobile-nav" aria-label="Мобильная навигация">
+        <button class="mobile-nav-item is-active" data-view="dashboard" type="button"><span>⌂</span><small>Обзор</small></button>
+        <button class="mobile-nav-item" data-view="expenses" type="button"><span>↗</span><small>Расходы</small></button>
+        <button class="mobile-add" id="mobileExpenseButton" type="button" aria-label="Добавить расход">＋</button>
+        <button class="mobile-nav-item" data-view="wallets" type="button"><span>▣</span><small>Кошельки</small></button>
+        <button class="mobile-nav-item" data-view="limits" type="button"><span>◎</span><small>Лимиты</small></button>
+      </nav>
+    </div>
+
+    <dialog class="modal" id="expenseModal">
+      <form method="dialog" id="expenseForm">
+        <div class="modal-header">
+          <div><p class="card-kicker">Новая операция</p><h2>Добавить расход</h2></div>
+          <button class="close-button" value="cancel" type="button" data-close-modal="expenseModal" aria-label="Закрыть">×</button>
+        </div>
+        <div class="amount-input-wrap">
+          <label for="expenseAmount">Сумма в VND</label>
+          <div class="amount-input"><input id="expenseAmount" name="amount" type="text" inputmode="decimal" placeholder="0" autocomplete="off" required /><span>₫</span></div>
+          <small id="amountConversion">≈ 0 ₽</small>
+        </div>
+        <div class="form-grid">
+          <label class="field"><span>Дата</span><input id="expenseDate" name="date" type="date" required /></label>
+          <label class="field"><span>Категория</span><select id="expenseCategory" name="category" required></select></label>
+          <label class="field full"><span>Оплата</span><select id="expenseWallet" name="walletId" required></select></label>
+          <label class="field full"><span>Комментарий <em>необязательно</em></span><input id="expenseNote" name="note" type="text" maxlength="80" placeholder="Например, ужин в кафе" /></label>
+        </div>
+        <div class="modal-actions"><button class="secondary-button" value="cancel" type="button" data-close-modal="expenseModal">Отмена</button><button class="primary-button" type="submit">Добавить расход</button></div>
+      </form>
+    </dialog>
+
+    <dialog class="modal" id="walletModal">
+      <form method="dialog" id="walletForm">
+        <div class="modal-header">
+          <div><p class="card-kicker">Счёт или наличные</p><h2 id="walletModalTitle">Добавить кошелёк</h2></div>
+          <button class="close-button" value="cancel" type="button" data-close-modal="walletModal" aria-label="Закрыть">×</button>
+        </div>
+        <input id="walletEditId" type="hidden" />
+        <div class="form-grid">
+          <label class="field full"><span>Название</span><input id="walletName" type="text" maxlength="40" placeholder="Например, Наличные VND" required /></label>
+          <label class="field"><span>Валюта</span><select id="walletCurrency"><option value="VND">VND — донги</option><option value="RUB">RUB — рубли</option><option value="USD">USD — доллары</option><option value="USDT">USDT — Tether</option></select></label>
+          <label class="field"><span>Баланс</span><input id="walletBalance" type="number" step="any" min="0" placeholder="0" required /></label>
+        </div>
+        <div class="modal-actions"><button class="secondary-button" value="cancel" type="button" data-close-modal="walletModal">Отмена</button><button class="primary-button" type="submit">Сохранить</button></div>
+      </form>
+    </dialog>
+
+    <div class="toast-region" id="toastRegion" aria-live="polite"></div>
+  </body>
+</html>
