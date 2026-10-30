@@ -6,9 +6,9 @@
     <meta name="theme-color" content="#f4f5f1" />
     <meta
       name="description"
-      content="Личный финансовый помощник для расходов во Вьетнаме: VND, RUB, кошельки, лимиты и отчёты."
+      content="Финансовый помощник для доходов и расходов во Вьетнаме: VND, RUB, кошельки, лимиты и отчёты."
     />
-    <title>Dongle — контроль расходов</title>
+    <title>Dongle — доходы и расходы</title>
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="styles.css" />
     <script src="app.js" defer></script>
@@ -27,6 +27,9 @@
           </button>
           <button class="nav-item" data-view="expenses" type="button">
             <span aria-hidden="true">↗</span><span>Расходы</span>
+          </button>
+          <button class="nav-item" data-view="income" type="button">
+            <span aria-hidden="true">↙</span><span>Прибыль</span>
           </button>
           <button class="nav-item" data-view="wallets" type="button">
             <span aria-hidden="true">▣</span><span>Кошельки</span>
@@ -103,6 +106,11 @@
             </article>
           </div>
 
+          <button class="income-summary" data-go-view="income" type="button">
+            <span><small id="incomePeriodTitle">Прибыль сегодня</small><strong id="incomePeriodRub">0 ₽</strong></span>
+            <span class="income-summary-detail"><span id="incomePeriodCount">0 поступлений</span><span aria-hidden="true">→</span></span>
+          </button>
+
           <div class="dashboard-grid">
             <article class="panel category-panel">
               <div class="panel-header">
@@ -160,6 +168,29 @@
           </article>
         </section>
 
+        <section class="view" id="incomeView" data-view-panel="income">
+          <div class="section-toolbar">
+            <div class="month-picker">
+              <button class="icon-button" id="prevIncomeMonth" type="button" aria-label="Предыдущий месяц доходов">←</button>
+              <div><small>Поступления за месяц</small><strong id="incomeReportMonth"></strong></div>
+              <button class="icon-button" id="nextIncomeMonth" type="button" aria-label="Следующий месяц доходов">→</button>
+            </div>
+            <label class="search-box">
+              <span aria-hidden="true">⌕</span>
+              <input id="incomeSearch" type="search" placeholder="Поиск по доходам" />
+            </label>
+          </div>
+          <div class="report-strip">
+            <div><span>За месяц</span><strong id="incomeReportRub">0 ₽</strong><small id="incomeReportVnd">≈ 0 ₫</small></div>
+            <div><span>Среднее в день</span><strong id="incomeReportAverage">0 ₽</strong><small id="incomeReportDays">0 дней с поступлениями</small></div>
+            <div><span>Самое крупное</span><strong id="incomeReportLargest">0 ₽</strong><small id="incomeReportLargestSource">—</small></div>
+          </div>
+          <article class="panel table-panel">
+            <div class="expense-list-header"><span>Поступление</span><span>Кошелёк</span><span>Сумма</span><span></span></div>
+            <div id="allIncome"></div>
+          </article>
+        </section>
+
         <section class="view" id="walletsView" data-view-panel="wallets">
           <div class="section-intro">
             <div><p>Все ваши деньги — наличные, карты и криптокошельки — в одном месте.</p></div>
@@ -186,12 +217,12 @@
             </article>
             <article class="panel settings-card">
               <div class="panel-header"><div><p class="card-kicker">Резервная копия</p><h3>Экспорт и импорт</h3></div></div>
-              <p class="settings-copy">Скачайте все расходы, кошельки и лимиты одним JSON-файлом. Он пригодится при смене браузера или устройства.</p>
+              <p class="settings-copy">Скачайте доходы, расходы, кошельки и лимиты одним JSON-файлом. Он пригодится при смене браузера или устройства.</p>
               <div class="inline-actions"><button class="secondary-button" id="exportButton" type="button">Скачать данные</button><label class="file-button">Загрузить копию<input id="importInput" type="file" accept="application/json" /></label></div>
             </article>
             <article class="panel settings-card danger-card">
               <div class="panel-header"><div><p class="card-kicker">Опасная зона</p><h3>Очистить данные</h3></div></div>
-              <p class="settings-copy">Удалит все операции, кошельки и настройки из этого браузера. Отменить действие нельзя.</p>
+              <p class="settings-copy">Удалит все доходы, расходы, кошельки и настройки из этого браузера. Отменить действие нельзя.</p>
               <button class="danger-button" id="resetButton" type="button">Удалить всё</button>
             </article>
             <a class="developer-mobile-link" href="https://t.me/dayagichik" target="_blank" rel="noopener noreferrer">Разработчик @g1chx · Telegram ↗</a>
@@ -203,6 +234,7 @@
         <button class="mobile-nav-item is-active" data-view="dashboard" type="button"><span>⌂</span><small>Обзор</small></button>
         <button class="mobile-nav-item" data-view="expenses" type="button"><span>↗</span><small>Расходы</small></button>
         <button class="mobile-add" id="mobileExpenseButton" type="button" aria-label="Добавить расход">＋</button>
+        <button class="mobile-nav-item" data-view="income" type="button"><span>↙</span><small>Прибыль</small></button>
         <button class="mobile-nav-item" data-view="wallets" type="button"><span>▣</span><small>Кошельки</small></button>
         <button class="mobile-nav-item" data-view="limits" type="button"><span>◎</span><small>Лимиты</small></button>
       </nav>
@@ -229,6 +261,29 @@
       </form>
     </dialog>
 
+    <dialog class="modal" id="incomeModal">
+      <form method="dialog" id="incomeForm">
+        <div class="modal-header">
+          <div><p class="card-kicker">Новое поступление</p><h2>Добавить доход</h2></div>
+          <button class="close-button" value="cancel" type="button" data-close-modal="incomeModal" aria-label="Закрыть">×</button>
+        </div>
+        <div class="amount-input-wrap income-amount-wrap">
+          <label for="incomeAmount">Сумма дохода</label>
+          <div class="amount-input"><input id="incomeAmount" name="amount" type="text" inputmode="decimal" placeholder="0" autocomplete="off" required /><span id="incomeAmountSymbol">₫</span></div>
+          <small id="incomeConversion">≈ 0 ₽</small>
+        </div>
+        <div class="form-grid">
+          <label class="field"><span>Дата</span><input id="incomeDate" name="date" type="date" required /></label>
+          <label class="field"><span>Валюта дохода</span><select id="incomeCurrency" name="currency" required><option value="VND">VND — донги</option><option value="RUB">RUB — рубли</option><option value="USD">USD — доллары</option><option value="USDT">USDT — Tether</option></select></label>
+          <label class="field"><span>Источник</span><select id="incomeSource" name="source" required></select></label>
+          <label class="field"><span>Зачислить на</span><select id="incomeWallet" name="walletId" required></select></label>
+          <p class="income-credit-preview full" id="incomeWalletPreview">На кошелёк поступит 0 ₫</p>
+          <label class="field full"><span>Комментарий <em>необязательно</em></span><input id="incomeNote" name="note" type="text" maxlength="80" placeholder="Например, оплата проекта" /></label>
+        </div>
+        <div class="modal-actions"><button class="secondary-button" value="cancel" type="button" data-close-modal="incomeModal">Отмена</button><button class="primary-button" type="submit">Добавить доход</button></div>
+      </form>
+    </dialog>
+
     <dialog class="modal" id="walletModal">
       <form method="dialog" id="walletForm">
         <div class="modal-header">
@@ -240,6 +295,7 @@
           <label class="field full"><span>Название</span><input id="walletName" type="text" maxlength="40" placeholder="Например, Наличные VND" required /></label>
           <label class="field"><span>Валюта</span><select id="walletCurrency"><option value="VND">VND — донги</option><option value="RUB">RUB — рубли</option><option value="USD">USD — доллары</option><option value="USDT">USDT — Tether</option></select></label>
           <label class="field"><span>Баланс</span><input id="walletBalance" type="number" step="any" min="0" placeholder="0" required /></label>
+          <p class="wallet-currency-hint full" id="walletCurrencyHint" hidden>Валюту кошелька с операциями изменить нельзя. Можно создать новый кошелёк.</p>
         </div>
         <div class="modal-actions"><button class="secondary-button" value="cancel" type="button" data-close-modal="walletModal">Отмена</button><button class="primary-button" type="submit">Сохранить</button></div>
       </form>
