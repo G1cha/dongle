@@ -65,9 +65,8 @@
               <span id="rateLabel">Загружаю курс…</span>
               <span aria-hidden="true">↻</span>
             </button>
-            <button class="mobile-settings-button" id="mobileSettingsButton" type="button" aria-label="Открыть настройки">⚙</button>
             <button class="primary-button" id="openExpenseButton" type="button">
-              <span aria-hidden="true">＋</span> Добавить расход
+              <span aria-hidden="true">＋</span> Добавить запись
             </button>
           </div>
         </header>
@@ -232,13 +231,27 @@
 
       <nav class="mobile-nav" aria-label="Мобильная навигация">
         <button class="mobile-nav-item is-active" data-view="dashboard" type="button"><span>⌂</span><small>Обзор</small></button>
-        <button class="mobile-nav-item" data-view="expenses" type="button"><span>↗</span><small>Расходы</small></button>
-        <button class="mobile-add" id="mobileExpenseButton" type="button" aria-label="Добавить расход">＋</button>
-        <button class="mobile-nav-item" data-view="income" type="button"><span>↙</span><small>Прибыль</small></button>
-        <button class="mobile-nav-item" data-view="wallets" type="button"><span>▣</span><small>Кошельки</small></button>
+        <button class="mobile-nav-item" data-view="expenses" type="button"><span>↗</span><small>Расход</small></button>
+        <button class="mobile-nav-item" data-view="income" type="button"><span>↙</span><small>Доход</small></button>
+        <button class="mobile-add" id="mobileExpenseButton" type="button" aria-label="Добавить запись">＋</button>
+        <button class="mobile-nav-item" data-view="wallets" type="button"><span>▣</span><small>Деньги</small></button>
         <button class="mobile-nav-item" data-view="limits" type="button"><span>◎</span><small>Лимиты</small></button>
+        <button class="mobile-nav-item" data-view="settings" type="button" aria-label="Настройки"><span>⚙</span><small>Настр.</small></button>
       </nav>
     </div>
+
+    <dialog class="modal chooser-modal" id="entryTypeModal">
+      <div class="chooser-content">
+        <div class="modal-header">
+          <div><p class="card-kicker">Новая запись</p><h2>Что добавить?</h2></div>
+          <button class="close-button" type="button" data-close-modal="entryTypeModal" aria-label="Закрыть">×</button>
+        </div>
+        <div class="entry-options">
+          <button class="entry-option" data-entry-type="expense" type="button"><span class="entry-option-icon expense-option-icon" aria-hidden="true">↗</span><span><strong>Расход</strong><small>Покупка или оплата</small></span><span aria-hidden="true">→</span></button>
+          <button class="entry-option" data-entry-type="income" type="button"><span class="entry-option-icon income-option-icon" aria-hidden="true">↙</span><span><strong>Прибыль</strong><small>Поступление денег</small></span><span aria-hidden="true">→</span></button>
+        </div>
+      </div>
+    </dialog>
 
     <dialog class="modal" id="expenseModal">
       <form method="dialog" id="expenseForm">
@@ -247,14 +260,16 @@
           <button class="close-button" value="cancel" type="button" data-close-modal="expenseModal" aria-label="Закрыть">×</button>
         </div>
         <div class="amount-input-wrap">
-          <label for="expenseAmount">Сумма в VND</label>
-          <div class="amount-input"><input id="expenseAmount" name="amount" type="text" inputmode="decimal" placeholder="0" autocomplete="off" required /><span>₫</span></div>
+          <label for="expenseAmount">Сумма расхода</label>
+          <div class="amount-input"><input id="expenseAmount" name="amount" type="text" inputmode="decimal" placeholder="0" autocomplete="off" required /><span id="expenseAmountSymbol">₫</span></div>
           <small id="amountConversion">≈ 0 ₽</small>
         </div>
         <div class="form-grid">
           <label class="field"><span>Дата</span><input id="expenseDate" name="date" type="date" required /></label>
-          <label class="field"><span>Категория</span><select id="expenseCategory" name="category" required></select></label>
+          <label class="field"><span>Валюта расхода</span><select id="expenseCurrency" name="currency" required><option value="VND">VND — донги</option><option value="RUB">RUB — рубли</option><option value="USD">USD — доллары</option><option value="USDT">USDT — Tether</option></select></label>
+          <label class="field full"><span>Категория</span><select id="expenseCategory" name="category" required></select></label>
           <label class="field full"><span>Оплата</span><select id="expenseWallet" name="walletId" required></select></label>
+          <p class="income-credit-preview expense-debit-preview full" id="expenseWalletPreview">С кошелька спишется 0 ₫</p>
           <label class="field full"><span>Комментарий <em>необязательно</em></span><input id="expenseNote" name="note" type="text" maxlength="80" placeholder="Например, ужин в кафе" /></label>
         </div>
         <div class="modal-actions"><button class="secondary-button" value="cancel" type="button" data-close-modal="expenseModal">Отмена</button><button class="primary-button" type="submit">Добавить расход</button></div>

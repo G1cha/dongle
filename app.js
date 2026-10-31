@@ -33,7 +33,6 @@ const DEFAULT_STATE = {
 
 let state = loadState();
 let activePeriod = "day";
-let activeView = "dashboard";
 let reportDate = new Date();
 let incomeReportDate = new Date();
 
@@ -153,6 +152,12 @@ function convertCurrency(amount, from, to, rates = state.rates) {
   return NaN;
 }
 
+function expenseRub(expense) {
+  return Number.isFinite(Number(expense.amountRub)) && expense.amountRub != null
+    ? Number(expense.amountRub)
+    : expense.amountVnd * (expense.rateVndRub || state.rates.vndRub);
+}
+
 function roundForCurrency(amount, currency) {
   return currency === "VND" ? Math.round(amount) : Math.round((amount + Number.EPSILON) * 100) / 100;
 }
@@ -203,6 +208,8 @@ function renderAll() {
   renderLimits();
   populateWalletSelect();
   populateIncomeWalletSelect();
+  if ($("#expenseModal").open) updateAmountConversion();
+  if ($("#incomeModal").open) updateIncomeConversion();
 }
 
 function renderRate() {
@@ -218,7 +225,7 @@ function renderRate() {
 function renderDashboard() {
   const expenses = getPeriodExpenses();
   const totalVnd = expenses.reduce((sum, item) => sum + item.amountVnd, 0);
-  const totalRub = expenses.reduce((sum, item) => sum + item.amountVnd * (item.rateVndRub || state.rates.vndRub), 0);
+  const totalRub = expenses.reduce((sum, item) => sum + expenseRub(item), 0);
   const labels = { day: ["Расходы сегодня", "Сегодня"], week: ["Расходы за 7 дней", "7 дней"], month: ["Расходы в этом месяце", "Месяц"] };
 
   $("#periodTitle").textContent = labels[activePeriod][0];
@@ -350,10 +357,19 @@ function expenseRowHtml(expense) {
   const category = CATEGORIES[expense.category] || CATEGORIES.other;
   const wallet = state.wallets.find((item) => item.id === expense.walletId);
   const title = expense.note || category.name;
+  const currency = expense.currency || "VND";
+  const amount = expense.amount ?? expense.amountVnd;
+  const secondary = currency === "RUB"
+    ? `≈ ${formatVnd(expense.amountVnd)}`
+    : `≈ ${formatRub(expenseRub(expense))}`;
+  const walletCurrency = expense.walletCurrency || wallet?.currency;
+  const debit = currency !== walletCurrency && walletCurrency && expense.walletDebit != null
+    ? ` · списано ${formatWallet(expense.walletDebit, walletCurrency)}`
+    : "";
   return `<div class="expense-row">
     <div class="expense-main"><i class="category-icon" style="background:${category.soft};color:${category.color}">${category.icon}</i><span><strong>${escapeHtml(title)}</strong><small>${category.name} · ${formatDate(expense.date)}</small></span></div>
     <span class="expense-wallet">${escapeHtml(wallet?.name || "Удалённый кошелёк")}</span>
-    <div class="expense-amount"><strong>− ${formatVnd(expense.amountVnd)}</strong><small>≈ ${formatRub(expense.amountVnd * (expense.rateVndRub || state.rates.vndRub))}</small></div>
+    <div class="expense-amount"><strong>− ${formatWallet(amount, currency)}</strong><small>${secondary}${debit}</small></div>
     <button class="delete-button" data-delete-expense="${expense.id}" type="button" aria-label="Удалить расход">×</button>
   </div>`;
 }
@@ -373,7 +389,7 @@ function renderExpensesReport() {
     return `${item.note} ${category} ${wallet}`.toLowerCase().includes(query);
   }).sort(sortExpenses);
   const totalVnd = base.reduce((sum, item) => sum + item.amountVnd, 0);
-  const totalRub = base.reduce((sum, item) => sum + item.amountVnd * (item.rateVndRub || state.rates.vndRub), 0);
+  const totalRub = base.reduce((sum, item) => sum + expenseRub(item), 0);
   const uniqueDays = new Set(base.map((item) => item.date)).size;
   const largest = [...base].sort((a, b) => b.amountVnd - a.amountVnd)[0];
   $("#reportMonth").textContent = new Intl.DateTimeFormat("ru-RU", { month: "long", year: "numeric" }).format(reportDate);
@@ -389,8 +405,9 @@ function renderExpensesReport() {
 function incomeRowHtml(income) {
   const source = INCOME_SOURCES[income.source] || INCOME_SOURCES.other;
   const wallet = state.wallets.find((item) => item.id === income.walletId);
-  const credited = income.currency !== wallet?.currency && wallet
-    ? ` · зачислено ${formatWallet(income.walletCredit, wallet.currency)}`
+  const walletCurrency = income.walletCurrency || wallet?.currency;
+  const credited = income.currency !== walletCurrency && walletCurrency
+    ? ` · зачислено ${formatWallet(income.walletCredit, walletCurrency)}`
     : "";
   return `<div class="expense-row income-row">
     <div class="expense-main"><i class="category-icon" style="background:${source.soft};color:${source.color}">${source.icon}</i><span><strong>${escapeHtml(income.note || source.name)}</strong><small>${source.name} · ${formatDate(income.date)}</small></span></div>
@@ -459,15 +476,11 @@ function populateIncomeWalletSelect() {
 }
 
 function switchView(view) {
-  activeView = view;
   $$("[data-view-panel]").forEach((panel) => panel.classList.toggle("is-active", panel.dataset.viewPanel === view));
   $$("[data-view]").forEach((button) => button.classList.toggle("is-active", button.dataset.view === view));
   const titles = { dashboard: ["Финансовый помощник", greeting()], expenses: ["История операций", "Расходы"], income: ["История поступлений", "Прибыль"], wallets: ["Ваши деньги", "Кошельки"], limits: ["Бюджет по категориям", "Лимиты"], settings: ["Данные и валюта", "Настройки"] };
   $("#pageEyebrow").textContent = titles[view][0];
   $("#pageTitle").textContent = titles[view][1];
-  const addLabel = view === "income" ? "Добавить доход" : "Добавить расход";
-  $("#openExpenseButton").innerHTML = `<span aria-hidden="true">＋</span> ${addLabel}`;
-  $("#mobileExpenseButton").setAttribute("aria-label", addLabel);
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -488,14 +501,15 @@ function openExpenseModal() {
   $("#expenseForm").reset();
   $("#expenseDate").value = localDateString();
   populateWalletSelect();
+  const wallet = state.wallets.find((item) => item.id === $("#expenseWallet").value);
+  $("#expenseCurrency").value = wallet?.currency || "VND";
   updateAmountConversion();
   $("#expenseModal").showModal();
   setTimeout(() => $("#expenseAmount").focus(), 50);
 }
 
-function openPrimaryModal() {
-  if (activeView === "income") openIncomeModal();
-  else openExpenseModal();
+function openEntryTypeModal() {
+  $("#entryTypeModal").showModal();
 }
 
 function openIncomeModal() {
@@ -532,35 +546,58 @@ function updateIncomeConversion() {
 
 function updateAmountConversion() {
   const amount = parseAmount($("#expenseAmount").value);
-  $("#amountConversion").textContent = `≈ ${formatRub(amount * state.rates.vndRub)}`;
+  const currency = $("#expenseCurrency").value;
+  const wallet = state.wallets.find((item) => item.id === $("#expenseWallet").value);
+  $("#expenseAmountSymbol").textContent = { VND: "₫", RUB: "₽", USD: "$", USDT: "₮" }[currency];
+  const rub = convertCurrency(amount, currency, "RUB");
+  const vnd = convertCurrency(amount, currency, "VND");
+  $("#amountConversion").textContent = currency === "VND"
+    ? `≈ ${formatRub(rub)}`
+    : currency === "RUB" ? `≈ ${formatVnd(vnd)}` : `≈ ${formatRub(rub)} · ${formatVnd(vnd)}`;
+  const walletDebit = wallet ? roundForCurrency(convertCurrency(amount, currency, wallet.currency), wallet.currency) : 0;
+  $("#expenseWalletPreview").textContent = wallet
+    ? `С «${wallet.name}» спишется ${formatWallet(walletDebit, wallet.currency)}${wallet.currency !== currency ? " по текущему курсу" : ""}`
+    : "Выберите кошелёк для оплаты";
 }
 
 function addExpense(event) {
   event.preventDefault();
-  const amount = parseAmount($("#expenseAmount").value);
+  const currency = $("#expenseCurrency").value;
+  const amount = roundForCurrency(parseAmount($("#expenseAmount").value), currency);
   const wallet = state.wallets.find((item) => item.id === $("#expenseWallet").value);
-  if (!amount || amount <= 0 || !wallet) {
-    showToast("Проверьте сумму и способ оплаты", true);
+  if (!Number.isFinite(amount) || amount <= 0 || !wallet || !CATEGORIES[$("#expenseCategory").value]) {
+    showToast("Проверьте сумму, категорию и способ оплаты", true);
     return;
   }
-  const walletDebit = vndToWallet(amount, wallet.currency);
+  const walletDebit = roundForCurrency(convertCurrency(amount, currency, wallet.currency), wallet.currency);
+  const amountVnd = convertCurrency(amount, currency, "VND");
+  const amountRub = convertCurrency(amount, currency, "RUB");
+  if (!Number.isFinite(walletDebit) || walletDebit <= 0 || !Number.isFinite(amountVnd) || !Number.isFinite(amountRub)) {
+    showToast("Сумма слишком мала для списания в выбранной валюте", true);
+    return;
+  }
   const expense = {
     id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
-    amountVnd: Math.round(amount),
+    amount,
+    currency,
+    amountVnd,
+    amountRub,
     rateVndRub: state.rates.vndRub,
+    rateVndUsd: state.rates.vndUsd,
     date: $("#expenseDate").value,
     category: $("#expenseCategory").value,
     walletId: wallet.id,
+    walletCurrency: wallet.currency,
     walletDebit,
     note: $("#expenseNote").value.trim(),
     createdAt: new Date().toISOString(),
   };
   state.expenses.push(expense);
-  wallet.balance -= walletDebit;
+  wallet.balance = roundForCurrency(wallet.balance - walletDebit, wallet.currency);
   saveState();
   $("#expenseModal").close();
   renderAll();
-  showToast(`Расход ${formatVnd(amount)} добавлен`);
+  showToast(`Расход ${formatWallet(amount, currency)} добавлен`);
   warnIfLimitExceeded(expense.category);
 }
 
@@ -617,11 +654,12 @@ function deleteExpense(id) {
   const expense = state.expenses.find((item) => item.id === id);
   if (!expense || !window.confirm("Удалить расход? Списанная сумма вернётся в кошелёк.")) return;
   const wallet = state.wallets.find((item) => item.id === expense.walletId);
-  if (wallet) wallet.balance += Number(expense.walletDebit ?? vndToWallet(expense.amountVnd, wallet.currency));
+  const canRestore = wallet && (!expense.walletCurrency || wallet.currency === expense.walletCurrency);
+  if (canRestore) wallet.balance = roundForCurrency(wallet.balance + Number(expense.walletDebit ?? vndToWallet(expense.amountVnd, wallet.currency)), wallet.currency);
   state.expenses = state.expenses.filter((item) => item.id !== id);
   saveState();
   renderAll();
-  showToast("Расход удалён, баланс восстановлен");
+  showToast(canRestore ? "Расход удалён, баланс восстановлен" : "Расход удалён");
 }
 
 function deleteIncome(id) {
@@ -777,21 +815,21 @@ function bindEvents() {
     $$(".period-button").forEach((item) => item.classList.toggle("is-active", item === button));
     renderDashboard();
   }));
-  $("#openExpenseButton").addEventListener("click", openPrimaryModal);
-  $("#mobileExpenseButton").addEventListener("click", openPrimaryModal);
-  $("#mobileSettingsButton").addEventListener("click", () => switchView("settings"));
+  $("#openExpenseButton").addEventListener("click", openEntryTypeModal);
+  $("#mobileExpenseButton").addEventListener("click", openEntryTypeModal);
+  $$("[data-entry-type]").forEach((button) => button.addEventListener("click", () => {
+    $("#entryTypeModal").close();
+    if (button.dataset.entryType === "income") openIncomeModal();
+    else openExpenseModal();
+  }));
   $("#expenseForm").addEventListener("submit", addExpense);
   $("#expenseAmount").addEventListener("input", updateAmountConversion);
+  $("#expenseCurrency").addEventListener("change", updateAmountConversion);
+  $("#expenseWallet").addEventListener("change", updateAmountConversion);
   $("#incomeForm").addEventListener("submit", addIncome);
   $("#incomeAmount").addEventListener("input", updateIncomeConversion);
   $("#incomeCurrency").addEventListener("change", updateIncomeConversion);
-  $("#incomeWallet").addEventListener("change", () => {
-    if (!$("#incomeAmount").value.trim()) {
-      const wallet = state.wallets.find((item) => item.id === $("#incomeWallet").value);
-      if (wallet) $("#incomeCurrency").value = wallet.currency;
-    }
-    updateIncomeConversion();
-  });
+  $("#incomeWallet").addEventListener("change", updateIncomeConversion);
   $("#openWalletButton").addEventListener("click", () => openWalletModal());
   $("#addWalletHome").addEventListener("click", () => openWalletModal());
   $("#walletForm").addEventListener("submit", saveWallet);
